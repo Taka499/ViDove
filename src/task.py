@@ -2,7 +2,11 @@ import threading
 import time
 
 import openai
-from pytube import YouTube
+
+# pytube deprecated
+# from pytube import YouTube
+
+import yt_dlp
 from os import getenv, getcwd
 from pathlib import Path
 from enum import Enum, auto
@@ -312,27 +316,48 @@ class YoutubeTask(Task):
         super().__init__(task_id, task_local_dir, task_cfg)
         self.task_logger.info("Task Creation method: Youtube Link")
         self.youtube_url = youtube_url
+        self.video_resolution = task_cfg["video_download"]["resolution"]
         # self.model = model
 
     def run(self, pre_load_asr_model = None):
-        yt = YouTube(self.youtube_url)
-        video = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
 
-        if video:
-            video.download(str(self.task_local_dir), filename=f"task_{self.task_id}.mp4")
-            self.task_logger.info(f'Video Name: {video.default_filename}')
-        else:
-            raise FileNotFoundError(f" Video stream not found for link {self.youtube_url}")
+        self.task_logger.info(f"Youtube URL: {self.youtube_url}")
+        self.task_logger.info(f"Video Resolution: {self.video_resolution}")
+        video_download_path = f"{self.task_local_dir}/task_{self.task_id}.mp4"
+        audio_download_dir = f"{self.task_local_dir}/task_{self.task_id}.mp3"
 
-        audio = yt.streams.filter(only_audio=True).first()
-        if audio:
-            audio.download(str(self.task_local_dir), filename=f"task_{self.task_id}.mp3")
+        if self.video_resolution == "best":
+            video_format = "bestvideo[ext=mp4]+bestaudio/bestvideo"
+        elif self.video_resolution in [360, 480, 720]:
+            video_format = f"bestvideo[height={self.video_resolution}][ext=mp4]+bestaudio[ext=mp3]/worstvideo[ext=mp4]+bestaudio[ext=mp3]/worst[ext=mp4]"
         else:
-            self.task_logger.info(" download audio failed, using ffmpeg to extract audio")
-            subprocess.run(
-                ['ffmpeg', '-i', self.task_local_dir.joinpath(f"task_{self.task_id}.mp4"), '-f', 'mp3',
-                 '-ab', '192000', '-vn', self.task_local_dir.joinpath(f"task_{self.task_id}.mp3")])
-            self.task_logger.info("audio extraction finished")
+            raise RuntimeError(f"Unsupported video resolution: {self.video_resolution}")
+        
+        video_opts = {
+            'format': video_format, 
+            'outtmpl': video_download_path,
+        }
+
+        audio_opts = {
+            'format': 'bestaudio[ext=mp3]/bestaudio', 
+            'outtmpl': audio_download_dir,
+        }
+
+        with yt_dlp.YoutubeDL(video_opts) as ydl:
+            try:
+                ydl.download([self.youtube_url])
+            except yt_dlp.utils.DownloadError as e:
+                self.task_logger.error(e)
+                raise RuntimeError(f"Failed to download video {self.youtube_url}")
+            ydl.close()
+        
+        with yt_dlp.YoutubeDL(audio_opts) as ydl:
+            try:
+                ydl.download([self.youtube_url])
+            except yt_dlp.utils.DownloadError as e:
+                self.task_logger.error(e)
+                raise RuntimeError(f"Failed to download audio {self.youtube_url}")
+            ydl.close()
         
         self.video_path = self.task_local_dir.joinpath(f"task_{self.task_id}.mp4")
         self.audio_path = self.task_local_dir.joinpath(f"task_{self.task_id}.mp3")

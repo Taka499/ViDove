@@ -12,16 +12,20 @@ from src.task import Task
 
 launch_config = "./configs/local_launch.yaml"
 task_config = './configs/task_config.yaml'
+launch_cfg = load(open(launch_config), Loader=Loader)
+LAUNCH_MODE = launch_cfg["environ"]
 
 
 model_dict = {"stable_large": None, "stable_medium": None, "stable_base": None}
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def init(apikey, opt_post, opt_pre, output_type, src_lang, tgt_lang, domain, opt_asr_method, chunk_size, translation_model):
-    launch_cfg = load(open(launch_config), Loader=Loader)
+def init(apikey, opt_resolution, opt_post, opt_pre, output_type, src_lang, tgt_lang, domain, opt_asr_method, chunk_size, translation_model):
     task_cfg = load(open(task_config), Loader=Loader)
 
-    if launch_cfg["environ"] == "demo":
+    # overwrite config file
+    resolution = "best" if opt_resolution == "best" else int(opt_resolution[:-1])
+
+    if LAUNCH_MODE == "demo":
         VIDOVE_DECODE_KEY = os.getenv("VIDOVE_DECODE_KEY")
         # overwrite api key
         if apikey != "":
@@ -34,14 +38,17 @@ def init(apikey, opt_post, opt_pre, output_type, src_lang, tgt_lang, domain, opt
         else:
             task_cfg["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
             translation_model = "gpt-3.5-turbo"
-            gr.Warning("Free Mode: API key is not provided, you can only use gpt-3.5-turbo model for translation.")
-    elif launch_cfg["environ"] == "local":
+            resolution = 480
+            gr.Warning("Free Mode: API key is not provided, you can only use gpt-3.5-turbo model for translation. And the video resolution is set to <=480p.")
+    elif LAUNCH_MODE == "local":
         if apikey != "":
             task_cfg["OPENAI_API_KEY"] = apikey
         else:
             task_cfg["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+    else:
+        raise gr.Error("Invalid Launch Mode")
 
-    # overwrite config file
+    task_cfg["video_download"]["resolution"] = resolution
     task_cfg["source_lang"] = src_lang
     if src_lang == "ZH":
         task_cfg["translation"]["chunk_size"] = 100
@@ -112,8 +119,8 @@ def init(apikey, opt_post, opt_pre, output_type, src_lang, tgt_lang, domain, opt
 
     return task_id, task_dir, task_cfg, pre_load_asr_model
 
-def process_input(apikey, video_file, audio_file, srt_file, youtube_link, src_lang, tgt_lang, domain, opt_asr_method, opt_post, opt_pre, output_type, chunk_size, translation_model):
-    task_id, task_dir, task_cfg, pre_load_asr_model = init(apikey, opt_post, opt_pre, output_type, src_lang, tgt_lang, domain, opt_asr_method, chunk_size, translation_model)
+def process_input(apikey, video_file, audio_file, srt_file, youtube_link, opt_resolution, src_lang, tgt_lang, domain, opt_asr_method, opt_post, opt_pre, output_type, chunk_size, translation_model):
+    task_id, task_dir, task_cfg, pre_load_asr_model = init(apikey, opt_resolution, opt_post, opt_pre, output_type, src_lang, tgt_lang, domain, opt_asr_method, chunk_size, translation_model)
     if youtube_link:
         task = Task.fromYoutubeLink(youtube_link, task_id, task_dir, task_cfg)
         task.run(pre_load_asr_model)
@@ -153,6 +160,10 @@ with gr.Blocks() as demo:
     apikey = gr.components.Textbox(label="Insert Your API Key Here", type="password")
     with gr.Tab("Youtube Link"):
         link = gr.components.Textbox(label="Enter a YouTube URL")
+        resolution_choices = ["best", "720p", "480p", "360p"]
+        if LAUNCH_MODE == "demo":
+            resolution_choices = ["720p", "480p", "360p"]
+        opt_resolution = gr.components.Dropdown(choices=resolution_choices, label="Select Resolution", value="480p")
     with gr.Tab("Video File"):
         video = gr.components.Video(label="Upload a video")
     with gr.Tab("Audio File"):
@@ -192,8 +203,9 @@ with gr.Blocks() as demo:
     gr.Markdown("##### If you have any issue, please download the log file and send it to us via email or discord.")
     log_output = gr.components.File(label="Log Output")
 
-    submit_button.click(process_input, inputs=[apikey, video, audio, srt, link, opt_src, opt_tgt, opt_domain, opt_asr_method, opt_post, opt_pre, opt_out, chunk_size, translation_model], outputs=[file_output, log_output])
+    submit_button.click(process_input, inputs=[apikey, video, audio, srt, link, opt_resolution, opt_src, opt_tgt, opt_domain, opt_asr_method, opt_post, opt_pre, opt_out, chunk_size, translation_model], outputs=[file_output, log_output])
 
 if __name__ == "__main__":
+    print(f"Launch Mode: {LAUNCH_MODE}")
     demo.queue(max_size=5)
     demo.launch(show_error=True)

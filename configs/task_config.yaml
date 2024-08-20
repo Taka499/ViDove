@@ -3,6 +3,10 @@ source_lang: EN
 target_lang: ZH
 field: General
 
+# YouTube Download Option
+video_download:
+  resolution: 480 # 360, 480, 720, best(best we can find)
+
 # ASR config
 ASR:
   ASR_model: whisper-api # whisper-large-v3, stable-whisper-base, stable-whisper-medium, stable-whisper-large
