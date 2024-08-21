@@ -153,7 +153,7 @@ with gr.Blocks() as demo:
 
     gr.Markdown("### Purchase")
     gr.Markdown("Note that you can use our demo without purchasing an API key, but you can only use the **gpt-3.5-turbo** model for translation. If you want to use other models, please purchase an API key.")
-    gr.Markdown("[Purchase API Key Here](https://afdian.net/a/gggzmz)")
+    gr.Markdown("[Purchase API Key Here](https://afdian.com/a/gggzmz)")
     
     gr.Markdown("### Input")
 
