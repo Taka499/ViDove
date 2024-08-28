@@ -9,6 +9,7 @@ from src.srt_util.srt import split_script
 
 from .assistant import Assistant
 from .LLM import LLM
+from .MTA import MTA
 
 SUPPORT_LANG_MAP = {
     "EN": "English",
@@ -40,17 +41,19 @@ class Translator:
             self.translator = Assistant(self.client, system_prompt = self.system_prompt, domain = domain)
         elif self.model_name in ["gpt-3.5-turbo", "gpt-4", "gpt-4o"]:
             self.translator = LLM(self.client, self.model_name, system_prompt = self.system_prompt)
+        elif self.model_name == "Multiagent":
+            self.translator = MTA(self.client, "gpt-4o", self.domain, self.src_lang, self.tgt_lang, SUPPORT_LANG_MAP[self.tgt_lang],self.task_logger)
         else:
             print(f"Unsupported model name: {self.model_name}")
             raise NotImplementedError
-    
+
         self.task_logger.info(f"Using {self.model_name} as translation model")
 
     def set_srt(self, srt):
         self.srt = srt
         self.script_arr, self.range_arr = split_script(srt.get_source_only(), self.chunk_size)
         self.task_logger.info("SRT file set")
-    
+
     def prompt_selector(self):
         try:
             src_lang = SUPPORT_LANG_MAP[self.src_lang]
@@ -60,15 +63,15 @@ class Translator:
             print("Unsupported language, is your abbreviation correct?")
             print(f"supported language map: {SUPPORT_LANG_MAP}")
             self.task_logger.info(f"Unsupported language detected: {src_lang} to {tgt_lang}")
-            
+
         prompt = f"""
-            you are a translation assistant, your job is to translate a video in domain of {self.domain} from {src_lang} to {tgt_lang}, 
-            you will be provided with a segement in {src_lang} parsed by line, where your translation text should keep the original 
-            meaning and the number of lines. DO NOT INCLUDE THE INDEX NUMBER IN YOUR TRANSLATION.  /n/n 
+            you are a translation assistant, your job is to translate a video in domain of {self.domain} from {src_lang} to {tgt_lang},
+            you will be provided with a segement in {src_lang} parsed by line, where your translation text should keep the original
+            meaning and the number of lines. DO NOT INCLUDE THE INDEX NUMBER IN YOUR TRANSLATION.  /n/n
             """
         self.task_logger.info(f"System Prompt: {prompt}")
         return prompt
-    
+
     def translate(self):
         """
         Translates the given script array into another language using the chatgpt and writes to the SRT file.
@@ -80,7 +83,7 @@ class Translator:
 
         if self.srt is None:
             raise ValueError("SRT file not set")
-        
+
         if self.system_prompt is None:
             self.system_prompt = "你是一个翻译助理，你的任务是翻译视频，你会被提供一个按行分割的英文段落，你需要在保证句意和行数的情况下输出翻译后的文本。"
             self.task_logger.info(f"translation prompt: {self.system_prompt}")
@@ -107,6 +110,5 @@ class Translator:
             self.task_logger.info(f"source text: {sentence}")
             self.task_logger.info(f"translate text: {translation}")
             self.srt.set_translation(translation, range_, self.model_name, self.task_id)
-
 
         
