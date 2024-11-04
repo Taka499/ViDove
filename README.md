@@ -21,7 +21,7 @@
     <a href="https://pigeonai.club/"><strong>Offical Website »</strong></a>
     <br />
     <br />
-    <a href="http://43.153.174.128:7860/">Try Demo</a>
+    <a href="https://ai.starpigeon.group/">Try Demo</a>
     ·
     <a href="https://github.com/project-kxkg/ViDove/issues">Report Bug</a>
     ·
