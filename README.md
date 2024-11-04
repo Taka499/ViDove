@@ -13,7 +13,7 @@
     <img src="images/logo_draft.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">🐦ViDove: RAG Augmented End-to-end Video Translation Toolkit</h3>
+  <h3 align="center">🐦ViDove: RAG Augmented End-to-end Multimodal Translation Agent</h3>
 
   <p align="center">
     Transcribe and Translate Your Video with a Single Click
