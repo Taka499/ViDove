@@ -13,7 +13,7 @@
     <img src="images/logo_draft.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">🐦ViDove: RAG Augmented End-to-end Video Translation Toolkit</h3>
+  <h3 align="center">🐦ViDove: RAG Augmented End-to-end Multimodal Translation Agent</h3>
 
   <p align="center">
     Transcribe and Translate Your Video with a Single Click
@@ -21,7 +21,7 @@
     <a href="https://pigeonai.club/"><strong>Offical Website »</strong></a>
     <br />
     <br />
-    <a href="http://43.153.174.128:7860/">Try Demo</a>
+    <a href="https://ai.starpigeon.group/">Try Demo</a>
     ·
     <a href="https://github.com/project-kxkg/ViDove/issues">Report Bug</a>
     ·
